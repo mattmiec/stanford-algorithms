@@ -1,27 +1,23 @@
 // source file graph.cpp
 #include "graph.h"
 #include "heap.h"
-#include "timing.h"
 #include <iostream>
 #include <string>
 #include <sstream>
 #include <cstdio>
-#include <unordered_map>
+#include <unordered_set>
 
 // create graph from file
 graph::graph(std::ifstream& infile) {
-  unsigned int n0, n1, d;
+  unsigned int n0, n1;
+  int d;
   std::string line;
-  std::string edge;
+  std::getline(infile, line); // read number of nodes, edges (but not needed)
   while (std::getline(infile, line)) {
-    std::istringstream linestream(line);
-    linestream >> n0;
-    while (linestream >> edge) {
-      if (std::sscanf(edge.c_str(), "%u,%u", &n1, &d) != 2) {
-        throw "Error reading edge values!";
-      }
-      addedge(n0 - 1, n1 - 1, d);
+    if (std::sscanf(line.c_str(), "%u %u %d", &n0, &n1, &d) != 3) {
+      throw "Error reading edge!";
     }
+    addedge(n0 - 1, n1 - 1, d);
   }
 }
 
@@ -38,54 +34,58 @@ void graph::print() const {
 }
 
 // add edge
-void graph::addedge(unsigned int n0, unsigned int n1, unsigned int d) {
+void graph::addedge(unsigned int n0, unsigned int n1, int d) {
   if (n0 >= adjlist.size()) {
     adjlist.resize(n0 + 1);
   }
+  if (n1 >= adjlist.size()) {
+    adjlist.resize(n1 + 1);
+  }
   edge newedge;
-  newedge.n1 = n1;
   newedge.d = d;
+  newedge.n1 = n1;
   adjlist[n0].push_front(newedge);
+  newedge.n1 = n0;
+  adjlist[n1].push_front(newedge);
 }
 
-// Dijkstra shortest path
-void graph::shortest_path(unsigned int s) {
+// Prim's MST
+void graph::prim(unsigned int s) {
 
-  // map to hold shortest paths
-  std::unordered_map<unsigned int, unsigned int> completed;
-  completed[s] = 0;
+  // set to hold completed vertices
+  std::unordered_set<unsigned int> completed;
+  completed.insert(s);
 
-  // initialize heap
+  // initialize heap with vertices adjacent to s
   heap h;
   for (auto it = adjlist[s].begin(); it != adjlist[s].end(); ++it) {
     h.add_node(it->n1, it->d);
   }
+
+  // initialize MST cost
+  long int total = 0;
 
   // main do loop, iterate until heap is empty
   while (!h.is_empty()) {
 
     // get next node from heap and add to completed
     heapnode nextnode = h.extract_min();
-    completed[nextnode.nodeid] = nextnode.score;
+    completed.insert(nextnode.nodeid);
+    total += nextnode.score;
+    std::cout << std::endl;
+    std::cout << "adding node " << nextnode.nodeid + 1 << std::endl;
+    std::cout << "total is now " << total << std::endl;
 
     // iterate over node's edges, adding to heap if not completed
     for (auto it = adjlist[nextnode.nodeid].begin(); it != adjlist[nextnode.nodeid].end(); ++it) {
       if (completed.find(it->n1) == completed.end()) {
-        h.add_node(it->n1, nextnode.score + it->d);
+        h.add_node(it->n1, it->d);
       }
     }
     h.check();
   }
 
-  std::cout << "Elapsed time from start of shortest_path to after main do loop (ms):" << std::endl;
-  timing();
-
-  // output shortest-paths for vertices requested in problem set
-  unsigned int vertices[] = {7, 37, 59, 82, 99, 115, 133, 165, 188, 197};
-  for (auto v : vertices) {
-    std::cout << "Shortest path to vertex " << v << ":  " << completed[v - 1] << std::endl;
-  }
-
-  std::cout << "Elapsed time from after main do loop to after output (ms):" << std::endl;
-  timing();
+  // output total cost
+  std::cout << std::endl;
+  std::cout << "MST cost: " << total << std::endl;
 }

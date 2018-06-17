@@ -15,11 +15,10 @@ int main()
   try {
     std::ifstream infile("dijkstraData.txt");
     graph mygraph(infile);
-
+    //mygraph.print()
     std::cout << "Elapsed time from start to after file read (ms):" << std::endl;
     timing();
-
-  mygraph.shortest_path(0);
+    mygraph.shortest_path(0);
   }
   catch (char const* error) {
     std::cerr << error << std::endl;
